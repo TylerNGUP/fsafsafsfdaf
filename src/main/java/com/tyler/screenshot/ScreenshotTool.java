@@ -168,11 +168,12 @@ class MainFrame extends JFrame {
     }
 }
 
-// 截图覆盖层类
+// 截图覆盖层类 - 改进以支持多显示器
 class ScreenshotOverlay extends JFrame {
     MainFrame mainFrame;
     private BufferedImage screenImage;
     private SelectionPanel selectionPanel;
+    private Rectangle allScreensBounds; // 所有屏幕的组合边界
 
     public ScreenshotOverlay(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -182,7 +183,16 @@ class ScreenshotOverlay extends JFrame {
 
     private void initComponents() {
         setUndecorated(true);
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // 获取所有屏幕的组合边界
+        allScreensBounds = getCombinedScreenBounds();
+
+        // 设置窗口大小为所有屏幕的组合大小
+        setSize(allScreensBounds.width, allScreensBounds.height);
+
+        // 将窗口位置设置为所有屏幕的左上角
+        setLocation(allScreensBounds.x, allScreensBounds.y);
+
         setBackground(new Color(0, 0, 0, 128));
 
         selectionPanel = new SelectionPanel(this);
@@ -200,11 +210,35 @@ class ScreenshotOverlay extends JFrame {
         });
     }
 
+    // 获取所有屏幕的组合边界
+    private Rectangle getCombinedScreenBounds() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] screens = ge.getScreenDevices();
+
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+
+        for (GraphicsDevice screen : screens) {
+            GraphicsConfiguration gc = screen.getDefaultConfiguration();
+            Rectangle bounds = gc.getBounds();
+
+            minX = Math.min(minX, bounds.x);
+            minY = Math.min(minY, bounds.y);
+            maxX = Math.max(maxX, bounds.x + bounds.width);
+            maxY = Math.max(maxY, bounds.y + bounds.height);
+        }
+
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+
     private void captureScreen() {
         try {
             Robot robot = new Robot();
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            screenImage = robot.createScreenCapture(new Rectangle(0, 0, screenSize.width, screenSize.height));
+
+            // 捕获所有屏幕的组合区域
+            screenImage = robot.createScreenCapture(allScreensBounds);
             selectionPanel.setScreenImage(screenImage);
             repaint();
         } catch (AWTException e) {
