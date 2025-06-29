@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
+import java.util.Stack;
 
 // 主类
 public class ScreenshotTool {
@@ -323,10 +324,10 @@ class EditFrame extends JFrame {
     private BufferedImage editedImage;
     private EditPanel editPanel;
     private JToolBar toolBar;
-    private JButton saveButton, copyButton, pinButton, closeButton, undoButton;
+    private JButton saveButton, copyButton, pinButton, closeButton, undoButton, eraserButton;
     private JButton rectangleButton, circleButton, lineButton, arrowButton, textButton;
     private JComboBox<String> colorComboBox;
-    private JSpinner strokeSpinner;
+    private JSpinner strokeSpinner, eraserSizeSpinner;
     private List<Shape> shapes = new ArrayList<>();
     private Shape currentShape = null;
     private Point startPoint = null;
@@ -334,8 +335,9 @@ class EditFrame extends JFrame {
     private String currentTool = "rectangle";
     private Color currentColor = Color.RED;
     private int currentStroke = 2;
+    private int currentEraserSize = 20; // 橡皮擦大小
     private Stack<List<Shape>> historyStack = new Stack<>();
-    private static final int MAX_HISTORY = 20;
+    private static final int MAX_HISTORY = 100; // 最多可撤销100次
 
     public EditFrame(MainFrame mainFrame, BufferedImage screenImage, Rectangle selectionRect) {
         this.mainFrame = mainFrame;
@@ -352,7 +354,7 @@ class EditFrame extends JFrame {
 
     private void initComponents() {
         setTitle("编辑截图");
-        setSize(originalImage.getWidth() + 20, originalImage.getHeight() + 80);
+        setSize(originalImage.getWidth() + 20, originalImage.getHeight() + 120);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -417,12 +419,18 @@ class EditFrame extends JFrame {
         textButton = new JButton("文字");
         textButton.addActionListener(e -> setCurrentTool("text"));
 
+        eraserButton = new JButton("橡皮擦");
+        eraserButton.addActionListener(e -> setCurrentTool("eraser"));
+
         String[] colors = {"红色", "绿色", "蓝色", "黄色", "黑色"};
         colorComboBox = new JComboBox<>(colors);
         colorComboBox.addActionListener(e -> setCurrentColor());
 
         strokeSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 10, 1));
         strokeSpinner.addChangeListener(e -> currentStroke = (int) strokeSpinner.getValue());
+
+        eraserSizeSpinner = new JSpinner(new SpinnerNumberModel(20, 10, 100, 10));
+        eraserSizeSpinner.addChangeListener(e -> currentEraserSize = (int) eraserSizeSpinner.getValue());
 
         toolBar.add(undoButton);
         toolBar.addSeparator();
@@ -436,11 +444,15 @@ class EditFrame extends JFrame {
         toolBar.add(lineButton);
         toolBar.add(arrowButton);
         toolBar.add(textButton);
+        toolBar.add(eraserButton);
         toolBar.addSeparator();
         toolBar.add(new JLabel("颜色:"));
         toolBar.add(colorComboBox);
         toolBar.add(new JLabel(" 粗细:"));
         toolBar.add(strokeSpinner);
+        toolBar.addSeparator();
+        toolBar.add(new JLabel("橡皮擦大小:"));
+        toolBar.add(eraserSizeSpinner);
 
         add(toolBar, BorderLayout.NORTH);
     }
@@ -452,6 +464,7 @@ class EditFrame extends JFrame {
         lineButton.setEnabled(!tool.equals("line"));
         arrowButton.setEnabled(!tool.equals("arrow"));
         textButton.setEnabled(!tool.equals("text"));
+        eraserButton.setEnabled(!tool.equals("eraser"));
     }
 
     private void setCurrentColor() {
@@ -617,6 +630,7 @@ class EditFrame extends JFrame {
                         String text = textField.getText();
                         if (!text.isEmpty()) {
                             shapes.add(new TextShape(textField.getLocation(), text, currentColor, 14));
+                            saveHistory(); // 保存历史记录
                         }
                         remove(textField);
                         textField = null;
@@ -627,6 +641,8 @@ class EditFrame extends JFrame {
 
                     if (currentTool.equals("text")) {
                         createTextField(e.getPoint());
+                    } else if (currentTool.equals("eraser")) {
+                        eraseShapes(e.getPoint());
                     } else {
                         saveHistory(); // 保存历史记录
                         switch (currentTool) {
@@ -649,9 +665,10 @@ class EditFrame extends JFrame {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
-                    if (currentShape != null && !currentTool.equals("text")) {
+                    if (currentShape != null && !currentTool.equals("text") && !currentTool.equals("eraser")) {
                         endPoint = e.getPoint();
                         currentShape.setEndPoint(endPoint);
+                        saveHistory(); // 保存历史记录
                         currentShape = null;
                         repaint();
                     }
@@ -661,10 +678,12 @@ class EditFrame extends JFrame {
             addMouseMotionListener(new MouseMotionAdapter() {
                 @Override
                 public void mouseDragged(MouseEvent e) {
-                    if (currentShape != null && !currentTool.equals("text")) {
+                    if (currentShape != null && !currentTool.equals("text") && !currentTool.equals("eraser")) {
                         endPoint = e.getPoint();
                         currentShape.setEndPoint(endPoint);
                         repaint();
+                    } else if (currentTool.equals("eraser")) {
+                        eraseShapes(e.getPoint());
                     }
                 }
             });
@@ -687,6 +706,7 @@ class EditFrame extends JFrame {
                 String text = textField.getText();
                 if (!text.isEmpty()) {
                     shapes.add(new TextShape(point, text, currentColor, 14));
+                    saveHistory(); // 保存历史记录
                 }
                 remove(textField);
                 textField = null;
@@ -701,6 +721,7 @@ class EditFrame extends JFrame {
                         String text = textField.getText();
                         if (!text.isEmpty()) {
                             shapes.add(new TextShape(point, text, currentColor, 14));
+                            saveHistory(); // 保存历史记录
                         }
                         remove(textField);
                         textField = null;
@@ -711,6 +732,22 @@ class EditFrame extends JFrame {
 
             add(textField);
             textField.requestFocus();
+            repaint();
+        }
+
+        private void eraseShapes(Point point) {
+            int size = currentEraserSize;
+            Rectangle eraseRect = new Rectangle(point.x - size/2, point.y - size/2, size, size);
+
+            List<Shape> newShapes = new ArrayList<>();
+            for (Shape shape : shapes) {
+                if (!shape.getBounds().intersects(eraseRect)) {
+                    newShapes.add(shape);
+                }
+            }
+
+            shapes = newShapes;
+            saveHistory(); // 保存历史记录
             repaint();
         }
 
@@ -748,12 +785,13 @@ class PinnedWindow extends JFrame {
     private String currentTool = "rectangle";
     private Color currentColor = Color.RED;
     private int currentStroke = 2;
+    private int currentEraserSize = 20; // 橡皮擦大小
     private boolean isEditing = false;
     private JToolBar editToolbar;
 
     // 历史记录用于撤销
     private Stack<List<Shape>> historyStack = new Stack<>();
-    private static final int MAX_HISTORY = 20;
+    private static final int MAX_HISTORY = 100;
 
     public PinnedWindow(BufferedImage image) {
         this.originalImage = image;
@@ -818,6 +856,8 @@ class PinnedWindow extends JFrame {
 
                 if (currentTool.equals("text")) {
                     createTextField(imagePoint);
+                } else if (currentTool.equals("eraser")) {
+                    eraseShapes(imagePoint);
                 } else {
                     saveHistory(); // 保存历史记录
                     switch (currentTool) {
@@ -946,6 +986,9 @@ class PinnedWindow extends JFrame {
         JButton textButton = new JButton("文字");
         textButton.addActionListener(e -> setCurrentTool("text"));
 
+        JButton eraserButton = new JButton("橡皮擦");
+        eraserButton.addActionListener(e -> setCurrentTool("eraser"));
+
         String[] colors = {"红色", "绿色", "蓝色", "黄色", "黑色"};
         JComboBox<String> colorComboBox = new JComboBox<>(colors);
         colorComboBox.addActionListener(e -> {
@@ -972,6 +1015,9 @@ class PinnedWindow extends JFrame {
         JSpinner strokeSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 10, 1));
         strokeSpinner.addChangeListener(e -> currentStroke = (int) strokeSpinner.getValue());
 
+        JSpinner eraserSizeSpinner = new JSpinner(new SpinnerNumberModel(20, 10, 100, 10));
+        eraserSizeSpinner.addChangeListener(e -> currentEraserSize = (int) eraserSizeSpinner.getValue());
+
         editToolbar.add(undoButton);
         editToolbar.addSeparator();
         editToolbar.add(rectangleButton);
@@ -979,11 +1025,15 @@ class PinnedWindow extends JFrame {
         editToolbar.add(lineButton);
         editToolbar.add(arrowButton);
         editToolbar.add(textButton);
+        editToolbar.add(eraserButton);
         editToolbar.addSeparator();
         editToolbar.add(new JLabel("颜色:"));
         editToolbar.add(colorComboBox);
         editToolbar.add(new JLabel(" 粗细:"));
         editToolbar.add(strokeSpinner);
+        editToolbar.addSeparator();
+        editToolbar.add(new JLabel("橡皮擦大小:"));
+        editToolbar.add(eraserSizeSpinner);
 
         add(editToolbar, BorderLayout.SOUTH);
     }
@@ -1040,6 +1090,7 @@ class PinnedWindow extends JFrame {
             String text = textField.getText();
             if (!text.isEmpty()) {
                 addShape(new TextShape(point, text, currentColor, 14));
+                saveHistory(); // 保存历史记录
             }
             imageLabel.remove(textField);
             updateImage();
@@ -1051,6 +1102,7 @@ class PinnedWindow extends JFrame {
                 String text = textField.getText();
                 if (!text.isEmpty()) {
                     addShape(new TextShape(point, text, currentColor, 14));
+                    saveHistory(); // 保存历史记录
                 }
                 imageLabel.remove(textField);
                 updateImage();
@@ -1059,6 +1111,22 @@ class PinnedWindow extends JFrame {
 
         textField.requestFocus();
         imageLabel.repaint();
+    }
+
+    private void eraseShapes(Point point) {
+        int size = currentEraserSize;
+        Rectangle eraseRect = new Rectangle(point.x - size/2, point.y - size/2, size, size);
+
+        List<Shape> newShapes = new ArrayList<>();
+        for (Shape shape : shapes) {
+            if (!shape.getBounds().intersects(eraseRect)) {
+                newShapes.add(shape);
+            }
+        }
+
+        shapes = newShapes;
+        saveHistory(); // 保存历史记录
+        updateImage();
     }
 
     private Point convertToImageCoordinates(Point componentPoint) {
@@ -1154,6 +1222,7 @@ class PinnedWindow extends JFrame {
 interface Shape {
     void draw(Graphics2D g2d);
     void setEndPoint(Point endPoint);
+    Rectangle getBounds(); // 获取形状边界
 }
 
 // 矩形形状类
@@ -1186,6 +1255,15 @@ class RectangleShape implements Shape {
     @Override
     public void setEndPoint(Point endPoint) {
         this.endPoint = endPoint;
+    }
+
+    @Override
+    public Rectangle getBounds() {
+        int x = Math.min(startPoint.x, endPoint.x);
+        int y = Math.min(startPoint.y, endPoint.y);
+        int width = Math.abs(endPoint.x - startPoint.x);
+        int height = Math.abs(endPoint.y - startPoint.y);
+        return new Rectangle(x, y, width, height);
     }
 }
 
@@ -1220,6 +1298,15 @@ class CircleShape implements Shape {
     public void setEndPoint(Point endPoint) {
         this.endPoint = endPoint;
     }
+
+    @Override
+    public Rectangle getBounds() {
+        int x = Math.min(startPoint.x, endPoint.x);
+        int y = Math.min(startPoint.y, endPoint.y);
+        int width = Math.abs(endPoint.x - startPoint.x);
+        int height = Math.abs(endPoint.y - startPoint.y);
+        return new Rectangle(x, y, width, height);
+    }
 }
 
 // 直线形状类
@@ -1246,6 +1333,15 @@ class LineShape implements Shape {
     @Override
     public void setEndPoint(Point endPoint) {
         this.endPoint = endPoint;
+    }
+
+    @Override
+    public Rectangle getBounds() {
+        int minX = Math.min(startPoint.x, endPoint.x);
+        int minY = Math.min(startPoint.y, endPoint.y);
+        int maxX = Math.max(startPoint.x, endPoint.x);
+        int maxY = Math.max(startPoint.y, endPoint.y);
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 }
 
@@ -1288,6 +1384,29 @@ class ArrowShape implements Shape {
     public void setEndPoint(Point endPoint) {
         this.endPoint = endPoint;
     }
+
+    @Override
+    public Rectangle getBounds() {
+        int minX = Math.min(startPoint.x, endPoint.x);
+        int minY = Math.min(startPoint.y, endPoint.y);
+        int maxX = Math.max(startPoint.x, endPoint.x);
+        int maxY = Math.max(startPoint.y, endPoint.y);
+
+        // 扩展边界以包含箭头头部
+        double angle = Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x);
+        int headLength = 10;
+        int arrowX1 = endPoint.x - (int) (headLength * Math.cos(angle - Math.PI / 6));
+        int arrowY1 = endPoint.y - (int) (headLength * Math.sin(angle - Math.PI / 6));
+        int arrowX2 = endPoint.x - (int) (headLength * Math.cos(angle + Math.PI / 6));
+        int arrowY2 = endPoint.y - (int) (headLength * Math.sin(angle + Math.PI / 6));
+
+        minX = Math.min(minX, Math.min(arrowX1, arrowX2));
+        minY = Math.min(minY, Math.min(arrowY1, arrowY2));
+        maxX = Math.max(maxX, Math.max(arrowX1, arrowX2));
+        maxY = Math.max(maxY, Math.max(arrowY1, arrowY2));
+
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+    }
 }
 
 // 文字形状类
@@ -1319,5 +1438,14 @@ class TextShape implements Shape {
     @Override
     public void setEndPoint(Point endPoint) {
         // 文字不需要终点
+    }
+
+    @Override
+    public Rectangle getBounds() {
+        Font font = new Font("微软雅黑", Font.PLAIN, fontSize);
+        FontMetrics metrics = Toolkit.getDefaultToolkit().getFontMetrics(font);
+        int width = metrics.stringWidth(text);
+        int height = metrics.getHeight();
+        return new Rectangle(position.x, position.y - metrics.getDescent(), width, height);
     }
 }
