@@ -51,6 +51,10 @@ public class ScreenDrawer {
         MenuItem undoItem = new MenuItem("Undo Last Rectangle");
         undoItem.addActionListener(e -> undoLastRectangle());
 
+        // 添加"清除所有"菜单项
+        MenuItem clearItem = new MenuItem("Clear All Rectangles");
+        clearItem.addActionListener(e -> clearAllRectangles());
+
         // 添加"退出绘图模式"菜单项
         MenuItem exitDrawingItem = new MenuItem("Exit Drawing Mode");
         exitDrawingItem.addActionListener(e -> exitDrawingMode());
@@ -67,6 +71,7 @@ public class ScreenDrawer {
 
         popup.add(activateItem);
         popup.add(undoItem);
+        popup.add(clearItem);
         popup.add(exitDrawingItem);
         popup.addSeparator();
         popup.add(exitItem);
@@ -127,8 +132,27 @@ public class ScreenDrawer {
             frame.setBackground(Color.WHITE);
         }
 
-        frame.setAlwaysOnTop(true);
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        // 设置窗口大小为所有屏幕的组合区域
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice[] gds = ge.getScreenDevices();
+
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+
+        for (GraphicsDevice gd : gds) {
+            Rectangle bounds = gd.getDefaultConfiguration().getBounds();
+            minX = Math.min(minX, bounds.x);
+            minY = Math.min(minY, bounds.y);
+            maxX = Math.max(maxX, bounds.x + bounds.width);
+            maxY = Math.max(maxY, bounds.y + bounds.height);
+        }
+
+        // 设置窗口大小和位置
+        frame.setSize(maxX - minX, maxY - minY);
+        frame.setLocation(minX, minY);
+
         frame.setVisible(false);
 
         // 添加绘图面板
@@ -201,8 +225,7 @@ public class ScreenDrawer {
                     }
 
                     startPoint = null;
-                    // 移除退出绘图模式的调用，保持绘图模式
-                    // exitDrawingMode();
+                    // 保持绘图模式
                 }
             }
         });
@@ -274,6 +297,13 @@ public class ScreenDrawer {
                         e.consume();
                     }
 
+                    // Ctrl+X - 清除所有
+                    if (e.getKeyCode() == KeyEvent.VK_X &&
+                            (mods & InputEvent.CTRL_DOWN_MASK) != 0) {
+                        clearAllRectangles();
+                        e.consume();
+                    }
+
                     // ESC - 退出绘图模式
                     if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                         exitDrawingMode();
@@ -338,6 +368,19 @@ public class ScreenDrawer {
             trayIcon.displayMessage("屏幕绘图工具", "已移除最后绘制的矩形", TrayIcon.MessageType.INFO);
         } else {
             trayIcon.displayMessage("屏幕绘图工具", "没有可撤销的矩形", TrayIcon.MessageType.INFO);
+        }
+    }
+
+    private static void clearAllRectangles() {
+        if (!rectangles.isEmpty()) {
+            rectangles.clear();
+            System.out.println("清除所有矩形");
+            if (drawingMode) {
+                frame.repaint();
+            }
+            trayIcon.displayMessage("屏幕绘图工具", "已清除所有矩形", TrayIcon.MessageType.INFO);
+        } else {
+            trayIcon.displayMessage("屏幕绘图工具", "没有可清除的矩形", TrayIcon.MessageType.INFO);
         }
     }
 }

@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="93a0d985-406b-43a4-b5c7-b7f8dd01e3a9" name="Changes" comment="编写 readme.md 文档">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen/ScreenDrawingTool.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen2/ScreenDrawingTool.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen4/ScreenDrawingTool.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="93a0d985-406b-43a4-b5c7-b7f8dd01e3a9" name="Changes" comment="添加屏幕画框功能">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,7 +150,7 @@
       <workItem from="1751200205128" duration="9475000" />
       <workItem from="1751213468727" duration="269000" />
       <workItem from="1751680605070" duration="3557000" />
-      <workItem from="1751712888194" duration="4099000" />
+      <workItem from="1751712888194" duration="4780000" />
     </task>
     <task id="LOCAL-00001" summary="修复撤销功能&#10;添加橡皮擦功能">
       <option name="closed" value="true" />
@@ -196,7 +192,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751213719440</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="添加屏幕画框功能">
+      <option name="closed" value="true" />
+      <created>1751717241979</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1751717241979</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -207,7 +211,8 @@
     <MESSAGE value="实现跨屏截图" />
     <MESSAGE value="打包" />
     <MESSAGE value="编写 readme.md 文档" />
-    <option name="LAST_COMMIT_MESSAGE" value="编写 readme.md 文档" />
+    <MESSAGE value="添加屏幕画框功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="添加屏幕画框功能" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
