@@ -8,12 +8,18 @@ import java.util.ArrayList;
 
 public class ScreenDrawer {
 
-    private static final ArrayList<Rectangle> rectangles = new ArrayList<>();
+    private static final ArrayList<Rectangle> rectangles
+
+            = new ArrayList<>();
     private static JFrame frame;
     private static boolean drawingMode = false;
     private static Point startPoint;
     private static TrayIcon trayIcon;
     private static boolean forceFocus = false;
+    // 记录修饰键状态
+    private static boolean ctrlPressed = false;
+    private static boolean altPressed = false;
+    private static boolean shiftPressed = false;
 
     public static void main(String[] args) {
         // 启用窗口透明度支持
@@ -261,13 +267,32 @@ public class ScreenDrawer {
             }
         });
 
-        // 添加键盘焦点监听器
+        // 添加键盘监听器到窗口
         frame.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                // 记录修饰键状态
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlPressed = true;
+                if (e.getKeyCode() == KeyEvent.VK_ALT) altPressed = true;
+                if (e.getKeyCode() == KeyEvent.VK_SHIFT) shiftPressed = true;
+
+                // 检测Ctrl+Alt+Shift+A组合
+                if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && shiftPressed) {
+                    System.out.println("窗口内快捷键触发: Ctrl+Alt+Shift+A");
+                    enterDrawingMode();
+                    e.consume();
+                }
+
                 if (drawingMode) {
                     frame.requestFocus();
                 }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlPressed = false;
+                if (e.getKeyCode() == KeyEvent.VK_ALT) altPressed = false;
+                if (e.getKeyCode() == KeyEvent.VK_SHIFT) shiftPressed = false;
             }
         });
     }
@@ -278,28 +303,27 @@ public class ScreenDrawer {
                 KeyEvent e = (KeyEvent) event;
                 if (e.getID() == KeyEvent.KEY_PRESSED) {
                     int mods = e.getModifiersEx();
-                    int requiredMods = InputEvent.CTRL_DOWN_MASK |
-                            InputEvent.ALT_DOWN_MASK |
-                            InputEvent.SHIFT_DOWN_MASK;
 
-                    // Ctrl+Alt+Shift+A - 激活绘图模式
-                    if (e.getKeyCode() == KeyEvent.VK_A &&
-                            (mods & requiredMods) == requiredMods) {
-                        System.out.println("快捷键激活: Ctrl+Alt+Shift+A");
+                    // 记录全局修饰键状态
+                    if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlPressed = true;
+                    if (e.getKeyCode() == KeyEvent.VK_ALT) altPressed = true;
+                    if (e.getKeyCode() == KeyEvent.VK_SHIFT) shiftPressed = true;
+
+                    // Ctrl+Alt+Shift+A - 激活绘图模式（全局监听）
+                    if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && shiftPressed) {
+                        System.out.println("全局快捷键触发: Ctrl+Alt+Shift+A");
                         enterDrawingMode();
                         e.consume();
                     }
 
                     // Ctrl+Z - 撤销
-                    if (e.getKeyCode() == KeyEvent.VK_Z &&
-                            (mods & InputEvent.CTRL_DOWN_MASK) != 0) {
+                    if (e.getKeyCode() == KeyEvent.VK_Z && ctrlPressed) {
                         undoLastRectangle();
                         e.consume();
                     }
 
                     // Ctrl+X - 清除所有
-                    if (e.getKeyCode() == KeyEvent.VK_X &&
-                            (mods & InputEvent.CTRL_DOWN_MASK) != 0) {
+                    if (e.getKeyCode() == KeyEvent.VK_X && ctrlPressed) {
                         clearAllRectangles();
                         e.consume();
                     }
@@ -309,6 +333,10 @@ public class ScreenDrawer {
                         exitDrawingMode();
                         e.consume();
                     }
+                } else if (e.getID() == KeyEvent.KEY_RELEASED) {
+                    if (e.getKeyCode() == KeyEvent.VK_CONTROL) ctrlPressed = false;
+                    if (e.getKeyCode() == KeyEvent.VK_ALT) altPressed = false;
+                    if (e.getKeyCode() == KeyEvent.VK_SHIFT) shiftPressed = false;
                 }
             }
         }, AWTEvent.KEY_EVENT_MASK);
