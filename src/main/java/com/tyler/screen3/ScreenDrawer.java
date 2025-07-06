@@ -8,12 +8,59 @@ import java.util.ArrayList;
 
 public class ScreenDrawer {
 
-    private static final ArrayList<Rectangle> rectangles = new ArrayList<>();
+    // 定义可绘制对象的接口
+    interface Drawable {
+        void draw(Graphics2D g2d);
+    }
+
+    // 矩形类实现Drawable
+    static class DrawableRectangle implements Drawable {
+        Rectangle rect;
+        Color color;
+
+        DrawableRectangle(int x, int y, int width, int height) {
+            this.rect = new Rectangle(x, y, width, height);
+            this.color = Color.RED;
+        }
+
+        @Override
+        public void draw(Graphics2D g2d) {
+            g2d.setColor(color);
+            g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2d.drawRect(rect.x, rect.y, rect.width, rect.height);
+        }
+    }
+
+    // 文字类实现Drawable
+    static class DrawableText implements Drawable {
+        String text;
+        Point position;
+        Color color;
+        Font font;
+
+        DrawableText(String text, Point position) {
+            this.text = text;
+            this.position = position;
+            this.color = Color.BLUE;
+            this.font = new Font("Arial", Font.BOLD, 24);
+        }
+
+        @Override
+        public void draw(Graphics2D g2d) {
+            g2d.setColor(color);
+            g2d.setFont(font);
+            g2d.drawString(text, position.x, position.y);
+        }
+    }
+
+    private static final ArrayList<Drawable> drawables = new ArrayList<>();
     private static JFrame frame;
     private static boolean drawingMode = false;
+    private static boolean textMode = false; // 文字模式标志
     private static Point startPoint;
     private static TrayIcon trayIcon;
     private static boolean forceFocus = false;
+
     // 记录修饰键状态
     private static boolean ctrlPressed = false;
     private static boolean altPressed = false;
@@ -52,12 +99,12 @@ public class ScreenDrawer {
         activateItem.addActionListener(e -> enterDrawingMode());
 
         // 添加"撤销"菜单项
-        MenuItem undoItem = new MenuItem("Undo Last Rectangle");
-        undoItem.addActionListener(e -> undoLastRectangle());
+        MenuItem undoItem = new MenuItem("Undo Last Object");
+        undoItem.addActionListener(e -> undoLastObject());
 
         // 添加"清除所有"菜单项
-        MenuItem clearItem = new MenuItem("Clear All Rectangles");
-        clearItem.addActionListener(e -> clearAllRectangles());
+        MenuItem clearItem = new MenuItem("Clear All Objects");
+        clearItem.addActionListener(e -> clearAllObjects());
 
         // 添加"退出绘图模式"菜单项
         MenuItem exitDrawingItem = new MenuItem("Exit Drawing Mode");
@@ -128,11 +175,11 @@ public class ScreenDrawer {
                     .isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT)) {
                 frame.setBackground(new Color(0, 0, 0, 5)); // 几乎透明但非完全透明
             } else {
-                System.out.println("窗口透明度不受支持，将使用不透明窗口");
+                System.out.println("Window transparency not supported, using opaque window");
                 frame.setBackground(Color.WHITE);
             }
         } catch (Exception e) {
-            System.out.println("设置窗口透明度失败: " + e.getMessage());
+            System.out.println("Setting window transparency failed: " + e.getMessage());
             frame.setBackground(Color.WHITE);
         }
 
@@ -170,15 +217,13 @@ public class ScreenDrawer {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                // 绘制所有矩形 - 只绘制边框
-                g2d.setColor(Color.RED);
-                g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                for (Rectangle rect : rectangles) {
-                    g2d.drawRect(rect.x, rect.y, rect.width, rect.height);
+                // 绘制所有对象
+                for (Drawable drawable : drawables) {
+                    drawable.draw(g2d);
                 }
 
-                // 绘制当前正在绘制的矩形 - 只绘制边框
-                if (drawingMode && startPoint != null) {
+                // 绘制当前正在绘制的矩形
+                if (drawingMode && startPoint != null && !textMode) {
                     Point currentPoint = MouseInfo.getPointerInfo().getLocation();
                     SwingUtilities.convertPointFromScreen(currentPoint, this);
 
@@ -187,8 +232,9 @@ public class ScreenDrawer {
                     int width = Math.abs(startPoint.x - currentPoint.x);
                     int height = Math.abs(startPoint.y - currentPoint.y);
 
-                    // 只绘制矩形边框，不填充背景
-                    g2d.setColor(new Color(255, 0, 0, 220)); // 增加不透明度
+                    // 绘制矩形边框
+                    g2d.setColor(new Color(255, 0, 0, 220));
+                    g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                     g2d.drawRect(x, y, width, height);
                 }
                 g2d.dispose();
@@ -203,15 +249,27 @@ public class ScreenDrawer {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (drawingMode && e.getButton() == MouseEvent.BUTTON1) {
-                    startPoint = e.getPoint();
-                    System.out.println("Mouse pressed at: " + startPoint);
-                    frame.requestFocus();
+                    if (textMode) {
+                        // 文字模式：弹出文本输入对话框
+                        String text = JOptionPane.showInputDialog(frame, "Enter text:", "Text Input", JOptionPane.PLAIN_MESSAGE);
+                        if (text != null && !text.trim().isEmpty()) {
+                            drawables.add(new DrawableText(text, e.getPoint()));
+                            System.out.println("Text added: '" + text + "' at " + e.getPoint());
+                            trayIcon.displayMessage("Screen Drawing Tool", "Text added: " + text, TrayIcon.MessageType.INFO);
+                            frame.repaint();
+                        }
+                    } else {
+                        // 矩形模式：记录起点
+                        startPoint = e.getPoint();
+                        System.out.println("Mouse pressed at: " + startPoint);
+                        frame.requestFocus();
+                    }
                 }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (drawingMode && startPoint != null && e.getButton() == MouseEvent.BUTTON1) {
+                if (drawingMode && startPoint != null && e.getButton() == MouseEvent.BUTTON1 && !textMode) {
                     Point endPoint = e.getPoint();
                     int x = Math.min(startPoint.x, endPoint.x);
                     int y = Math.min(startPoint.y, endPoint.y);
@@ -219,13 +277,13 @@ public class ScreenDrawer {
                     int height = Math.abs(startPoint.y - endPoint.y);
 
                     if (width > 5 && height > 5) {
-                        rectangles.add(new Rectangle(x, y, width, height));
-                        System.out.println("Rectangle added: " + rectangles.get(rectangles.size() - 1));
+                        drawables.add(new DrawableRectangle(x, y, width, height));
+                        System.out.println("Rectangle added: " + drawables.get(drawables.size() - 1));
                         trayIcon.displayMessage("Screen Drawing Tool", "New rectangle added", TrayIcon.MessageType.INFO);
                     }
 
                     startPoint = null;
-                    frame.repaint(); // 确保立即重绘
+                    frame.repaint();
                 }
             }
         });
@@ -233,7 +291,7 @@ public class ScreenDrawer {
         drawingPanel.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
-                if (drawingMode && startPoint != null) {
+                if (drawingMode && startPoint != null && !textMode) {
                     frame.repaint();
                 }
             }
@@ -270,10 +328,16 @@ public class ScreenDrawer {
                 if (e.getKeyCode() == KeyEvent.VK_ALT) altPressed = true;
                 if (e.getKeyCode() == KeyEvent.VK_SHIFT) shiftPressed = true;
 
-                // 检测Ctrl+Alt+Shift+A组合
+                // 检测Ctrl+Alt+Shift+A组合 - 激活绘图模式
                 if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && shiftPressed) {
                     System.out.println("Window shortcut triggered: Ctrl+Alt+Shift+A");
                     enterDrawingMode();
+                    e.consume();
+                }
+
+                // 检测Ctrl+Alt+A组合 - 切换文字模式
+                if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && !shiftPressed) {
+                    toggleTextMode();
                     e.consume();
                 }
 
@@ -316,15 +380,21 @@ public class ScreenDrawer {
                         e.consume();
                     }
 
+                    // Ctrl+Alt+A - 切换文字模式
+                    if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && !shiftPressed) {
+                        toggleTextMode();
+                        e.consume();
+                    }
+
                     // Ctrl+Z - 撤销
                     if (e.getKeyCode() == KeyEvent.VK_Z && ctrlPressed) {
-                        undoLastRectangle();
+                        undoLastObject();
                         e.consume();
                     }
 
                     // Ctrl+X - 清除所有
                     if (e.getKeyCode() == KeyEvent.VK_X && ctrlPressed) {
-                        clearAllRectangles();
+                        clearAllObjects();
                         e.consume();
                     }
 
@@ -342,10 +412,33 @@ public class ScreenDrawer {
         }, AWTEvent.KEY_EVENT_MASK);
     }
 
+    private static void toggleTextMode() {
+        if (!drawingMode) {
+            // 必须先激活绘图模式
+            enterDrawingMode();
+        }
+
+        textMode = !textMode;
+        if (textMode) {
+            // 切换到文字模式
+            frame.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
+            trayIcon.displayMessage("Screen Drawing Tool",
+                    "Text mode activated\nClick anywhere to add text\nPress Ctrl+Alt+A to switch back",
+                    TrayIcon.MessageType.INFO);
+        } else {
+            // 切换回矩形模式
+            frame.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+            trayIcon.displayMessage("Screen Drawing Tool",
+                    "Rectangle mode activated\nDrag mouse to draw rectangle\nPress Ctrl+Alt+A to add text",
+                    TrayIcon.MessageType.INFO);
+        }
+    }
+
     private static void enterDrawingMode() {
         if (!drawingMode) {
             System.out.println("Entering drawing mode");
             drawingMode = true;
+            textMode = false; // 默认是矩形模式
 
             // 设置十字光标
             Cursor crosshairCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
@@ -360,7 +453,7 @@ public class ScreenDrawer {
                 frame.requestFocus();
 
                 // 延迟后再次请求焦点
-                Timer focusTimer = new Timer(500, e -> {
+                Timer focusTimer = new Timer(500, evt -> {
                     frame.toFront();
                     frame.requestFocus();
                 });
@@ -370,7 +463,7 @@ public class ScreenDrawer {
 
             // 显示通知
             trayIcon.displayMessage("Screen Drawing Tool",
-                    "Drawing mode activated\nDrag mouse to draw rectangle\nPress ESC to exit",
+                    "Drawing mode activated\nDrag mouse to draw rectangle\nPress Ctrl+Alt+A to add text",
                     TrayIcon.MessageType.INFO);
         }
     }
@@ -379,6 +472,7 @@ public class ScreenDrawer {
         if (drawingMode) {
             System.out.println("Exiting drawing mode");
             drawingMode = false;
+            textMode = false;
             startPoint = null;
             frame.setVisible(false);
             frame.setCursor(Cursor.getDefaultCursor());
@@ -386,29 +480,29 @@ public class ScreenDrawer {
         }
     }
 
-    private static void undoLastRectangle() {
-        if (!rectangles.isEmpty()) {
-            Rectangle removed = rectangles.remove(rectangles.size() - 1);
-            System.out.println("Undo rectangle: " + removed);
+    private static void undoLastObject() {
+        if (!drawables.isEmpty()) {
+            Drawable removed = drawables.remove(drawables.size() - 1);
+            System.out.println("Undo object: " + removed);
             if (drawingMode) {
                 frame.repaint();
             }
-            trayIcon.displayMessage("Screen Drawing Tool", "Last rectangle removed", TrayIcon.MessageType.INFO);
+            trayIcon.displayMessage("Screen Drawing Tool", "Last object removed", TrayIcon.MessageType.INFO);
         } else {
-            trayIcon.displayMessage("Screen Drawing Tool", "No rectangles to undo", TrayIcon.MessageType.INFO);
+            trayIcon.displayMessage("Screen Drawing Tool", "No objects to undo", TrayIcon.MessageType.INFO);
         }
     }
 
-    private static void clearAllRectangles() {
-        if (!rectangles.isEmpty()) {
-            rectangles.clear();
-            System.out.println("Clear all rectangles");
+    private static void clearAllObjects() {
+        if (!drawables.isEmpty()) {
+            drawables.clear();
+            System.out.println("Clear all objects");
             if (drawingMode) {
                 frame.repaint();
             }
-            trayIcon.displayMessage("Screen Drawing Tool", "All rectangles cleared", TrayIcon.MessageType.INFO);
+            trayIcon.displayMessage("Screen Drawing Tool", "All objects cleared", TrayIcon.MessageType.INFO);
         } else {
-            trayIcon.displayMessage("Screen Drawing Tool", "No rectangles to clear", TrayIcon.MessageType.INFO);
+            trayIcon.displayMessage("Screen Drawing Tool", "No objects to clear", TrayIcon.MessageType.INFO);
         }
     }
 }
