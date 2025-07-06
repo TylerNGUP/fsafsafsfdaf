@@ -1,4 +1,4 @@
-package com.tyler.screen3;
+package com.tyler.screendrawer;
 
 import javax.swing.*;
 import java.awt.*;
