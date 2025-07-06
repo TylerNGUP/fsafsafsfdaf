@@ -42,13 +42,17 @@ public class ScreenDrawer {
             this.text = text;
             this.position = position;
             this.color = Color.BLUE;
-            this.font = new Font("Arial", Font.BOLD, 24);
+            // 使用支持中文的字体
+            this.font = new Font("Microsoft YaHei", Font.BOLD, 24);
         }
 
         @Override
         public void draw(Graphics2D g2d) {
             g2d.setColor(color);
             g2d.setFont(font);
+            // 设置文本抗锯齿
+            g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             g2d.drawString(text, position.x, position.y);
         }
     }
@@ -58,6 +62,9 @@ public class ScreenDrawer {
     private static boolean drawingMode = false;
     private static boolean textMode = false; // 文字模式标志
     private static Point startPoint;
+    private static Point currentRectEndPoint; // 修复矩形绘制问题
+    private static Point textStartPoint; // 文字起始位置
+    private static StringBuilder currentText = new StringBuilder(); // 当前输入的文字
     private static TrayIcon trayIcon;
     private static boolean forceFocus = false;
 
@@ -222,20 +229,33 @@ public class ScreenDrawer {
                     drawable.draw(g2d);
                 }
 
-                // 绘制当前正在绘制的矩形
-                if (drawingMode && startPoint != null && !textMode) {
-                    Point currentPoint = MouseInfo.getPointerInfo().getLocation();
-                    SwingUtilities.convertPointFromScreen(currentPoint, this);
-
-                    int x = Math.min(startPoint.x, currentPoint.x);
-                    int y = Math.min(startPoint.y, currentPoint.y);
-                    int width = Math.abs(startPoint.x - currentPoint.x);
-                    int height = Math.abs(startPoint.y - currentPoint.y);
+                // 绘制当前正在绘制的矩形 - 修复矩形绘制问题
+                if (drawingMode && startPoint != null && currentRectEndPoint != null && !textMode) {
+                    int x = Math.min(startPoint.x, currentRectEndPoint.x);
+                    int y = Math.min(startPoint.y, currentRectEndPoint.y);
+                    int width = Math.abs(startPoint.x - currentRectEndPoint.x);
+                    int height = Math.abs(startPoint.y - currentRectEndPoint.y);
 
                     // 绘制矩形边框
                     g2d.setColor(new Color(255, 0, 0, 220));
                     g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                     g2d.drawRect(x, y, width, height);
+                }
+
+                // 绘制当前输入的文字
+                if (drawingMode && textMode && textStartPoint != null && currentText.length() > 0) {
+                    g2d.setColor(Color.BLUE);
+                    g2d.setFont(new Font("Microsoft YaHei", Font.BOLD, 24));
+                    g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g2d.drawString(currentText.toString(), textStartPoint.x, textStartPoint.y);
+
+                    // 绘制光标
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int textWidth = fm.stringWidth(currentText.toString());
+                    int cursorX = textStartPoint.x + textWidth;
+                    g2d.setColor(Color.BLACK);
+                    g2d.drawLine(cursorX, textStartPoint.y - 20, cursorX, textStartPoint.y + 5);
                 }
                 g2d.dispose();
             }
@@ -250,17 +270,20 @@ public class ScreenDrawer {
             public void mousePressed(MouseEvent e) {
                 if (drawingMode && e.getButton() == MouseEvent.BUTTON1) {
                     if (textMode) {
-                        // 文字模式：弹出文本输入对话框
-                        String text = JOptionPane.showInputDialog(frame, "Enter text:", "Text Input", JOptionPane.PLAIN_MESSAGE);
-                        if (text != null && !text.trim().isEmpty()) {
-                            drawables.add(new DrawableText(text, e.getPoint()));
-                            System.out.println("Text added: '" + text + "' at " + e.getPoint());
-                            trayIcon.displayMessage("Screen Drawing Tool", "Text added: " + text, TrayIcon.MessageType.INFO);
-                            frame.repaint();
+                        // 文字模式：如果已经有输入中的文字，确认它
+                        if (textStartPoint != null && currentText.length() > 0) {
+                            confirmText();
                         }
+
+                        // 设置新的文字起始位置
+                        textStartPoint = e.getPoint();
+                        currentText.setLength(0); // 清空当前文本
+                        System.out.println("Text input started at: " + textStartPoint);
+                        frame.requestFocus();
                     } else {
                         // 矩形模式：记录起点
                         startPoint = e.getPoint();
+                        currentRectEndPoint = e.getPoint(); // 初始化终点
                         System.out.println("Mouse pressed at: " + startPoint);
                         frame.requestFocus();
                     }
@@ -269,12 +292,13 @@ public class ScreenDrawer {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (drawingMode && startPoint != null && e.getButton() == MouseEvent.BUTTON1 && !textMode) {
-                    Point endPoint = e.getPoint();
-                    int x = Math.min(startPoint.x, endPoint.x);
-                    int y = Math.min(startPoint.y, endPoint.y);
-                    int width = Math.abs(startPoint.x - endPoint.x);
-                    int height = Math.abs(startPoint.y - endPoint.y);
+                if (drawingMode && startPoint != null && !textMode) {
+                    currentRectEndPoint = e.getPoint();
+
+                    int x = Math.min(startPoint.x, currentRectEndPoint.x);
+                    int y = Math.min(startPoint.y, currentRectEndPoint.y);
+                    int width = Math.abs(startPoint.x - currentRectEndPoint.x);
+                    int height = Math.abs(startPoint.y - currentRectEndPoint.y);
 
                     if (width > 5 && height > 5) {
                         drawables.add(new DrawableRectangle(x, y, width, height));
@@ -283,6 +307,7 @@ public class ScreenDrawer {
                     }
 
                     startPoint = null;
+                    currentRectEndPoint = null;
                     frame.repaint();
                 }
             }
@@ -292,6 +317,7 @@ public class ScreenDrawer {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (drawingMode && startPoint != null && !textMode) {
+                    currentRectEndPoint = e.getPoint();
                     frame.repaint();
                 }
             }
@@ -319,7 +345,7 @@ public class ScreenDrawer {
             }
         });
 
-        // 添加键盘监听器到窗口
+        // 添加键盘监听器到窗口 - 修复中文输入问题
         frame.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -333,12 +359,14 @@ public class ScreenDrawer {
                     System.out.println("Window shortcut triggered: Ctrl+Alt+Shift+A");
                     enterDrawingMode();
                     e.consume();
+                    return;
                 }
 
                 // 检测Ctrl+Alt+A组合 - 切换文字模式
                 if (e.getKeyCode() == KeyEvent.VK_A && ctrlPressed && altPressed && !shiftPressed) {
                     toggleTextMode();
                     e.consume();
+                    return;
                 }
 
                 if (drawingMode) {
@@ -346,7 +374,46 @@ public class ScreenDrawer {
 
                     // ESC - 退出绘图模式
                     if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        // 如果正在输入文字，先确认文字
+                        if (textMode && textStartPoint != null && currentText.length() > 0) {
+                            confirmText();
+                        }
                         exitDrawingMode();
+                        e.consume();
+                        return;
+                    }
+
+                    // 文字模式下的键盘处理
+                    if (textMode && textStartPoint != null) {
+                        // Enter键确认文字
+                        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                            confirmText();
+                            e.consume();
+                            return;
+                        }
+
+                        // Backspace删除字符
+                        if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+                            if (currentText.length() > 0) {
+                                currentText.deleteCharAt(currentText.length() - 1);
+                                frame.repaint();
+                            }
+                            e.consume();
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // 使用keyTyped事件捕获字符输入 - 修复中文输入问题
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (drawingMode && textMode && textStartPoint != null) {
+                    char c = e.getKeyChar();
+                    // 只处理可打印字符（包括中文字符）
+                    if (!Character.isISOControl(c)) {
+                        currentText.append(c);
+                        frame.repaint();
                         e.consume();
                     }
                 }
@@ -400,6 +467,10 @@ public class ScreenDrawer {
 
                     // ESC - 退出绘图模式
                     if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        // 如果正在输入文字，先确认文字
+                        if (textMode && textStartPoint != null && currentText.length() > 0) {
+                            confirmText();
+                        }
                         exitDrawingMode();
                         e.consume();
                     }
@@ -423,7 +494,7 @@ public class ScreenDrawer {
             // 切换到文字模式
             frame.setCursor(Cursor.getPredefinedCursor(Cursor.TEXT_CURSOR));
             trayIcon.displayMessage("Screen Drawing Tool",
-                    "Text mode activated\nClick anywhere to add text\nPress Ctrl+Alt+A to switch back",
+                    "Text mode activated\nClick anywhere to start typing\nPress Enter to confirm",
                     TrayIcon.MessageType.INFO);
         } else {
             // 切换回矩形模式
@@ -431,6 +502,19 @@ public class ScreenDrawer {
             trayIcon.displayMessage("Screen Drawing Tool",
                     "Rectangle mode activated\nDrag mouse to draw rectangle\nPress Ctrl+Alt+A to add text",
                     TrayIcon.MessageType.INFO);
+        }
+    }
+
+    private static void confirmText() {
+        if (textStartPoint != null && currentText.length() > 0) {
+            drawables.add(new DrawableText(currentText.toString(), new Point(textStartPoint.x, textStartPoint.y)));
+            System.out.println("Text added: '" + currentText + "' at " + textStartPoint);
+            trayIcon.displayMessage("Screen Drawing Tool", "Text added: " + currentText, TrayIcon.MessageType.INFO);
+
+            // 重置文字输入状态
+            currentText.setLength(0);
+            textStartPoint = null;
+            frame.repaint();
         }
     }
 
@@ -474,6 +558,9 @@ public class ScreenDrawer {
             drawingMode = false;
             textMode = false;
             startPoint = null;
+            currentRectEndPoint = null;
+            textStartPoint = null;
+            currentText.setLength(0);
             frame.setVisible(false);
             frame.setCursor(Cursor.getDefaultCursor());
             trayIcon.setToolTip("Screen Drawing Tool (Ready)");
