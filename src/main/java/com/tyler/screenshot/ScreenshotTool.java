@@ -46,19 +46,19 @@ class MainFrame extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("简易截图工具");
+        setTitle("Simple Screenshot Tool");
         setSize(300, 150);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
 
-        captureButton = new JButton("截图");
-        captureButton.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        captureButton = new JButton("Capture");
+        captureButton.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         captureButton.setPreferredSize(new Dimension(120, 40));
         captureButton.addActionListener(e -> startScreenshot());
 
-        viewPinnedButton = new JButton("查看钉图");
-        viewPinnedButton.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        viewPinnedButton = new JButton("View Pinned");
+        viewPinnedButton.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         viewPinnedButton.setPreferredSize(new Dimension(120, 40));
         viewPinnedButton.addActionListener(e -> togglePinnedWindows());
 
@@ -96,9 +96,9 @@ class MainFrame extends JFrame {
             }
 
             PopupMenu popup = new PopupMenu();
-            MenuItem captureItem = new MenuItem("截图");
-            MenuItem viewPinnedItem = new MenuItem("查看钉图");
-            MenuItem exitItem = new MenuItem("退出");
+            MenuItem captureItem = new MenuItem("Capture");
+            MenuItem viewPinnedItem = new MenuItem("View Pinned");
+            MenuItem exitItem = new MenuItem("Exit");
 
             captureItem.addActionListener(e -> startScreenshot());
             viewPinnedItem.addActionListener(e -> togglePinnedWindows());
@@ -109,7 +109,7 @@ class MainFrame extends JFrame {
             popup.addSeparator();
             popup.add(exitItem);
 
-            trayIcon = new TrayIcon(image, "简易截图工具", popup);
+            trayIcon = new TrayIcon(image, "Simple Screenshot Tool", popup);
             trayIcon.setImageAutoSize(true);
             trayIcon.addActionListener(e -> setVisible(true));
 
@@ -123,7 +123,7 @@ class MainFrame extends JFrame {
             addWindowStateListener(e -> {
                 if (e.getNewState() == ICONIFIED) {
                     setVisible(false);
-                    trayIcon.displayMessage("提示", "程序已最小化到托盘", TrayIcon.MessageType.INFO);
+                    trayIcon.displayMessage("Notice", "Application minimized to tray", TrayIcon.MessageType.INFO);
                 }
             });
         }
@@ -243,7 +243,7 @@ class ScreenshotOverlay extends JFrame {
             repaint();
         } catch (AWTException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "截图失败: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Screenshot failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             dispose();
             mainFrame.setVisible(true);
         }
@@ -387,7 +387,7 @@ class EditFrame extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("编辑截图");
+        setTitle("Edit Screenshot");
         setSize(originalImage.getWidth() + 20, originalImage.getHeight() + 120);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -423,40 +423,40 @@ class EditFrame extends JFrame {
         toolBar = new JToolBar();
         toolBar.setFloatable(false);
 
-        undoButton = new JButton("撤销");
+        undoButton = new JButton("Undo");
         undoButton.addActionListener(e -> undo());
 
-        saveButton = new JButton("保存");
+        saveButton = new JButton("Save");
         saveButton.addActionListener(e -> saveImage());
 
-        copyButton = new JButton("复制");
+        copyButton = new JButton("Copy");
         copyButton.addActionListener(e -> copyToClipboard());
 
-        pinButton = new JButton("钉在桌面");
+        pinButton = new JButton("Pin to Desktop");
         pinButton.addActionListener(e -> pinImage());
 
-        closeButton = new JButton("关闭");
+        closeButton = new JButton("Close");
         closeButton.addActionListener(e -> dispose());
 
-        rectangleButton = new JButton("矩形");
+        rectangleButton = new JButton("Rectangle");
         rectangleButton.addActionListener(e -> setCurrentTool("rectangle"));
 
-        circleButton = new JButton("圆形");
+        circleButton = new JButton("Circle");
         circleButton.addActionListener(e -> setCurrentTool("circle"));
 
-        lineButton = new JButton("直线");
+        lineButton = new JButton("Line");
         lineButton.addActionListener(e -> setCurrentTool("line"));
 
-        arrowButton = new JButton("箭头");
+        arrowButton = new JButton("Arrow");
         arrowButton.addActionListener(e -> setCurrentTool("arrow"));
 
-        textButton = new JButton("文字");
+        textButton = new JButton("Text");
         textButton.addActionListener(e -> setCurrentTool("text"));
 
-        eraserButton = new JButton("橡皮擦");
+        eraserButton = new JButton("Eraser");
         eraserButton.addActionListener(e -> setCurrentTool("eraser"));
 
-        String[] colors = {"红色", "绿色", "蓝色", "黄色", "黑色"};
+        String[] colors = {"Red", "Green", "Blue", "Yellow", "Black"};
         colorComboBox = new JComboBox<>(colors);
         colorComboBox.addActionListener(e -> setCurrentColor());
 
@@ -480,12 +480,12 @@ class EditFrame extends JFrame {
         toolBar.add(textButton);
         toolBar.add(eraserButton);
         toolBar.addSeparator();
-        toolBar.add(new JLabel("颜色:"));
+        toolBar.add(new JLabel("Color:"));
         toolBar.add(colorComboBox);
-        toolBar.add(new JLabel(" 粗细:"));
+        toolBar.add(new JLabel(" Stroke:"));
         toolBar.add(strokeSpinner);
         toolBar.addSeparator();
-        toolBar.add(new JLabel("橡皮擦大小:"));
+        toolBar.add(new JLabel("Eraser Size:"));
         toolBar.add(eraserSizeSpinner);
 
         add(toolBar, BorderLayout.NORTH);
@@ -504,19 +504,19 @@ class EditFrame extends JFrame {
     private void setCurrentColor() {
         String colorName = (String) colorComboBox.getSelectedItem();
         switch (colorName) {
-            case "红色":
+            case "Red":
                 currentColor = Color.RED;
                 break;
-            case "绿色":
+            case "Green":
                 currentColor = Color.GREEN;
                 break;
-            case "蓝色":
+            case "Blue":
                 currentColor = Color.BLUE;
                 break;
-            case "黄色":
+            case "Yellow":
                 currentColor = Color.YELLOW;
                 break;
-            case "黑色":
+            case "Black":
                 currentColor = Color.BLACK;
                 break;
         }
@@ -538,7 +538,7 @@ class EditFrame extends JFrame {
 
     private void saveImage() {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("保存截图");
+        fileChooser.setDialogTitle("Save Screenshot");
         fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter() {
             @Override
             public boolean accept(File f) {
@@ -547,7 +547,7 @@ class EditFrame extends JFrame {
 
             @Override
             public String getDescription() {
-                return "PNG 图片 (*.png)";
+                return "PNG Image (*.png)";
             }
         });
 
@@ -568,12 +568,12 @@ class EditFrame extends JFrame {
                 g2d.dispose();
 
                 ImageIO.write(editedImage, "PNG", file);
-                JOptionPane.showMessageDialog(this, "截图已保存到: " + file.getAbsolutePath(),
-                        "保存成功", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Screenshot saved to: " + file.getAbsolutePath(),
+                        "Save Successful", JOptionPane.INFORMATION_MESSAGE);
             } catch (IOException e) {
                 e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "保存失败: " + e.getMessage(),
-                        "错误", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Save failed: " + e.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -595,12 +595,12 @@ class EditFrame extends JFrame {
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(transferable, null);
 
-            JOptionPane.showMessageDialog(this, "截图已复制到剪贴板",
-                    "成功", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Screenshot copied to clipboard",
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "复制失败: " + e.getMessage(),
-                    "错误", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Copy failed: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -730,7 +730,7 @@ class EditFrame extends JFrame {
 
             textField = new JTextField();
             textField.setForeground(currentColor);
-            textField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+            textField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
             textField.setBorder(BorderFactory.createLineBorder(currentColor));
             textField.setOpaque(false);
             textField.setSize(100, 25);
@@ -838,7 +838,7 @@ class PinnedWindow extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("钉图");
+        setTitle("Pinned Screenshot");
         setUndecorated(true);
         setAlwaysOnTop(true);
         setBackground(new Color(0, 0, 0, 0));
@@ -866,7 +866,7 @@ class PinnedWindow extends JFrame {
         maximizeButton.addActionListener(e -> toggleMaximize());
 
         // 编辑按钮
-        JButton editButton = new JButton("编辑");
+        JButton editButton = new JButton("Edit");
         editButton.addActionListener(e -> toggleEditing());
 
         titleBar.add(editButton);
@@ -1002,45 +1002,45 @@ class PinnedWindow extends JFrame {
         editToolbar.setFloatable(false);
         editToolbar.setVisible(false);
 
-        JButton undoButton = new JButton("撤销");
+        JButton undoButton = new JButton("Undo");
         undoButton.addActionListener(e -> undo());
 
-        JButton rectangleButton = new JButton("矩形");
+        JButton rectangleButton = new JButton("Rectangle");
         rectangleButton.addActionListener(e -> setCurrentTool("rectangle"));
 
-        JButton circleButton = new JButton("圆形");
+        JButton circleButton = new JButton("Circle");
         circleButton.addActionListener(e -> setCurrentTool("circle"));
 
-        JButton lineButton = new JButton("直线");
+        JButton lineButton = new JButton("Line");
         lineButton.addActionListener(e -> setCurrentTool("line"));
 
-        JButton arrowButton = new JButton("箭头");
+        JButton arrowButton = new JButton("Arrow");
         arrowButton.addActionListener(e -> setCurrentTool("arrow"));
 
-        JButton textButton = new JButton("文字");
+        JButton textButton = new JButton("Text");
         textButton.addActionListener(e -> setCurrentTool("text"));
 
-        JButton eraserButton = new JButton("橡皮擦");
+        JButton eraserButton = new JButton("Eraser");
         eraserButton.addActionListener(e -> setCurrentTool("eraser"));
 
-        String[] colors = {"红色", "绿色", "蓝色", "黄色", "黑色"};
+        String[] colors = {"Red", "Green", "Blue", "Yellow", "Black"};
         JComboBox<String> colorComboBox = new JComboBox<>(colors);
         colorComboBox.addActionListener(e -> {
             String colorName = (String) colorComboBox.getSelectedItem();
             switch (colorName) {
-                case "红色":
+                case "Red":
                     currentColor = Color.RED;
                     break;
-                case "绿色":
+                case "Green":
                     currentColor = Color.GREEN;
                     break;
-                case "蓝色":
+                case "Blue":
                     currentColor = Color.BLUE;
                     break;
-                case "黄色":
+                case "Yellow":
                     currentColor = Color.YELLOW;
                     break;
-                case "黑色":
+                case "Black":
                     currentColor = Color.BLACK;
                     break;
             }
@@ -1061,12 +1061,12 @@ class PinnedWindow extends JFrame {
         editToolbar.add(textButton);
         editToolbar.add(eraserButton);
         editToolbar.addSeparator();
-        editToolbar.add(new JLabel("颜色:"));
+        editToolbar.add(new JLabel("Color:"));
         editToolbar.add(colorComboBox);
-        editToolbar.add(new JLabel(" 粗细:"));
+        editToolbar.add(new JLabel(" Stroke:"));
         editToolbar.add(strokeSpinner);
         editToolbar.addSeparator();
-        editToolbar.add(new JLabel("橡皮擦大小:"));
+        editToolbar.add(new JLabel("Eraser Size:"));
         editToolbar.add(eraserSizeSpinner);
 
         add(editToolbar, BorderLayout.SOUTH);
@@ -1109,7 +1109,7 @@ class PinnedWindow extends JFrame {
     private void createTextField(Point point) {
         JTextField textField = new JTextField();
         textField.setForeground(currentColor);
-        textField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        textField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
         textField.setBorder(BorderFactory.createLineBorder(currentColor));
         textField.setOpaque(false);
         textField.setSize(100, 25);
@@ -1460,7 +1460,7 @@ class TextShape implements Shape {
     @Override
     public void draw(Graphics2D g2d) {
         g2d.setColor(color);
-        Font font = new Font("微软雅黑", Font.PLAIN, fontSize);
+        Font font = new Font("Microsoft YaHei", Font.PLAIN, fontSize);
         g2d.setFont(font);
 
         FontMetrics metrics = g2d.getFontMetrics(font);
@@ -1476,7 +1476,7 @@ class TextShape implements Shape {
 
     @Override
     public Rectangle getBounds() {
-        Font font = new Font("微软雅黑", Font.PLAIN, fontSize);
+        Font font = new Font("Microsoft YaHei", Font.PLAIN, fontSize);
         FontMetrics metrics = Toolkit.getDefaultToolkit().getFontMetrics(font);
         int width = metrics.stringWidth(text);
         int height = metrics.getHeight();
