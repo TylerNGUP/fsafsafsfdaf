@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="93a0d985-406b-43a4-b5c7-b7f8dd01e3a9" name="Changes" comment="添加画框屏幕输入文字功能">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/Readme.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,11 +63,11 @@
   </component>
   <component name="RunManager" selected="Application.ScreenDrawer">
     <configuration name="ScreenDrawer" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
-      <option name="MAIN_CLASS_NAME" value="com.tyler.screen3.ScreenDrawer" />
+      <option name="MAIN_CLASS_NAME" value="com.tyler.screendrawer.ScreenDrawer" />
       <module name="Video_Recorder" />
       <extension name="coverage">
         <pattern>
-          <option name="PATTERN" value="com.tyler.screen3.*" />
+          <option name="PATTERN" value="com.tyler.screendrawer.*" />
           <option name="ENABLED" value="true" />
         </pattern>
       </extension>
@@ -151,7 +151,7 @@
       <workItem from="1751213468727" duration="269000" />
       <workItem from="1751680605070" duration="3557000" />
       <workItem from="1751712888194" duration="8392000" />
-      <workItem from="1751723076132" duration="4324000" />
+      <workItem from="1751723076132" duration="8180000" />
     </task>
     <task id="LOCAL-00001" summary="修复撤销功能&#10;添加橡皮擦功能">
       <option name="closed" value="true" />
@@ -233,7 +233,23 @@
       <option name="project" value="LOCAL" />
       <updated>1751763044792</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="添加画框屏幕输入文字功能">
+      <option name="closed" value="true" />
+      <created>1751770560691</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1751770560691</updated>
+    </task>
+    <task id="LOCAL-00012" summary="添加画框屏幕输入文字功能">
+      <option name="closed" value="true" />
+      <created>1751773297771</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1751773297771</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -263,37 +279,37 @@
           <option name="timeStamp" value="2" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>357</line>
           <option name="timeStamp" value="5" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>348</line>
           <option name="timeStamp" value="7" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>371</line>
           <option name="timeStamp" value="8" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>372</line>
           <option name="timeStamp" value="9" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>173</line>
           <option name="timeStamp" value="10" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>174</line>
           <option name="timeStamp" value="11" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-method">
-          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screen3/ScreenDrawer.java</url>
+          <url>file://$PROJECT_DIR$/src/main/java/com/tyler/screendrawer/ScreenDrawer.java</url>
           <line>350</line>
           <properties method="keyPressed">
             <option name="EMULATED" value="true" />

@@ -13,7 +13,7 @@
 Main-Class: com.tyler.screenshot.ScreenshotTool
 
 ```
-注意：文件末尾需要有一个空行，这是 JAR 规范要求的。
+**注意：文件末尾需要有一个空行，这是 JAR 规范要求的。**
 
 ### 1.2 使用命令行打包 JAR 文件
 打开终端，进入项目根目录，执行以下命令：
