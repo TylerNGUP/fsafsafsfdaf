@@ -18,7 +18,11 @@ import java.util.Stack;
 
 // 主类
 public class ScreenshotTool {
+    // 在ScreenshotTool的main方法中，添加DPI感知设置
     public static void main(String[] args) {
+        // 高DPI屏幕适配（Java 9+支持）
+        System.setProperty("sun.java2d.uiScale", "1.0");
+        System.setProperty("awt.useSystemAAFontSettings", "on");
         SwingUtilities.invokeLater(() -> {
             try {
                 // 设置系统默认外观
@@ -183,15 +187,16 @@ class ScreenshotOverlay extends JFrame {
 
     private void initComponents() {
         setUndecorated(true);
-
-        // 获取所有屏幕的组合边界（修复后：保留实际坐标）
+        // 获取所有屏幕的真实像素边界（已修复的逻辑）
         allScreensBounds = getAdjustedScreenBounds();
-
-        // 设置窗口大小为所有屏幕的组合大小
+        // 修复：窗口大小严格等于截图的原始像素尺寸（避免系统缩放影响）
         setSize(allScreensBounds.width, allScreensBounds.height);
-
-        // 强制窗口位置与屏幕组合边界起始点一致（修复位置偏移）
+        // 窗口位置严格对齐屏幕左上角（像素坐标）
         setLocation(allScreensBounds.x, allScreensBounds.y);
+        // 禁用窗口的自动缩放（针对高DPI屏幕）
+        if (System.getProperty("java.version").compareTo("9") >= 0) {
+            setPreferredSize(new Dimension(allScreensBounds.width, allScreensBounds.height));
+        }
 
         setBackground(new Color(0, 0, 0, 128));
 
@@ -334,12 +339,11 @@ class SelectionPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         if (screenImage != null) {
-            // 确保图像正确绘制在面板上
-            g.drawImage(screenImage, 0, 0, getWidth(), getHeight(), this);
+            // 修复：按原始尺寸绘制，不拉伸（0,0为起点，使用图像自身宽高）
+            g.drawImage(screenImage, 0, 0, screenImage.getWidth(), screenImage.getHeight(), this);
         }
-
+        // （以下选择框绘制逻辑保持不变）
         if (isSelecting && selectionRect.width > 0 && selectionRect.height > 0) {
             // 绘制选择区域
             Graphics2D g2d = (Graphics2D) g;
