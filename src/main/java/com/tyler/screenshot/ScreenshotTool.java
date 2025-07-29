@@ -169,11 +169,13 @@ class MainFrame extends JFrame {
 }
 
 // 截图覆盖层类 - 改进以支持多显示器
+// 截图覆盖层类 - 改进以支持多显示器
 class ScreenshotOverlay extends JFrame {
     MainFrame mainFrame;
     private BufferedImage screenImage;
     private SelectionPanel selectionPanel;
     private Rectangle allScreensBounds; // 所有屏幕的组合边界
+    private int minX, minY, maxX, maxY; // 保存原始边界值
 
     public ScreenshotOverlay(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -184,14 +186,16 @@ class ScreenshotOverlay extends JFrame {
     private void initComponents() {
         setUndecorated(true);
 
-        // 获取所有屏幕的组合边界
-        allScreensBounds = getCombinedScreenBounds();
+        // 获取所有屏幕的组合边界并保存原始坐标
+        calculateScreenBounds();
 
-        // 设置窗口大小为所有屏幕的组合大小
+        // 关键修改：移除setGraphicsConfiguration，改用位置调整
+        // 确保窗口显示在主屏幕上
+        setLocation(allScreensBounds.x, allScreensBounds.y);
         setSize(allScreensBounds.width, allScreensBounds.height);
 
-        // 将窗口位置设置为所有屏幕的左上角
-        setLocation(allScreensBounds.x, allScreensBounds.y);
+        // 确保窗口在最上层显示
+        setAlwaysOnTop(true);
 
         setBackground(new Color(0, 0, 0, 128));
 
@@ -208,37 +212,58 @@ class ScreenshotOverlay extends JFrame {
                 }
             }
         });
+
+        // 确保窗口能接收键盘事件
+        setFocusable(true);
+        requestFocusInWindow();
     }
 
-    // 获取所有屏幕的组合边界
-    private Rectangle getCombinedScreenBounds() {
+    // 计算屏幕边界并保存原始值和调整后的值
+    private void calculateScreenBounds() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] screens = ge.getScreenDevices();
 
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
+        minX = Integer.MAX_VALUE;
+        minY = Integer.MAX_VALUE;
+        maxX = Integer.MIN_VALUE;
+        maxY = Integer.MIN_VALUE;
 
         for (GraphicsDevice screen : screens) {
             GraphicsConfiguration gc = screen.getDefaultConfiguration();
             Rectangle bounds = gc.getBounds();
 
+            // 累加所有屏幕的边界
             minX = Math.min(minX, bounds.x);
             minY = Math.min(minY, bounds.y);
             maxX = Math.max(maxX, bounds.x + bounds.width);
             maxY = Math.max(maxY, bounds.y + bounds.height);
         }
 
-        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        // 计算偏移量（如果存在负坐标，将整体偏移到非负区域）
+        int offsetX = minX < 0 ? -minX : 0;
+        int offsetY = minY < 0 ? -minY : 0;
+
+        // 设置调整后的边界（确保左上角在可见区域内）
+        allScreensBounds = new Rectangle(
+                minX + offsetX,  // 修正X坐标（避免负坐标）
+                minY + offsetY,  // 修正Y坐标（避免负坐标）
+                maxX - minX,
+                maxY - minY
+        );
     }
 
     private void captureScreen() {
         try {
             Robot robot = new Robot();
 
-            // 捕获所有屏幕的组合区域
-            screenImage = robot.createScreenCapture(allScreensBounds);
+            // 捕获原始组合区域（使用保存的原始坐标）
+            Rectangle captureRect = new Rectangle(
+                    minX,  // 原始X（确保截图完整）
+                    minY,  // 原始Y（确保截图完整）
+                    maxX - minX,
+                    maxY - minY
+            );
+            screenImage = robot.createScreenCapture(captureRect);
             selectionPanel.setScreenImage(screenImage);
             repaint();
         } catch (AWTException e) {
@@ -254,6 +279,7 @@ class ScreenshotOverlay extends JFrame {
         new EditFrame(mainFrame, screenImage, selectionRect).setVisible(true);
     }
 }
+
 
 // 选择面板类
 class SelectionPanel extends JPanel {
