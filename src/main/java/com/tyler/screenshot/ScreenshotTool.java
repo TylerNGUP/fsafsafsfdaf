@@ -168,14 +168,12 @@ class MainFrame extends JFrame {
     }
 }
 
-// 截图覆盖层类 - 双屏环境优化版本
+// 截图覆盖层类 - 改进以支持多显示器
 class ScreenshotOverlay extends JFrame {
     MainFrame mainFrame;
     private BufferedImage screenImage;
     private SelectionPanel selectionPanel;
-    private Rectangle virtualScreenBounds; // 虚拟屏幕总边界
-    private int offsetX, offsetY; // 坐标偏移量，确保所有屏幕坐标为正值
-    private List<Rectangle> screenBoundsList = new ArrayList<>(); // 保存每个屏幕的边界
+    private Rectangle allScreensBounds; // 所有屏幕的组合边界
 
     public ScreenshotOverlay(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -185,14 +183,18 @@ class ScreenshotOverlay extends JFrame {
 
     private void initComponents() {
         setUndecorated(true);
-        setAlwaysOnTop(true);
+
+        // 获取所有屏幕的组合边界（改进方法）
+        allScreensBounds = getAdjustedScreenBounds();
+
+        // 设置窗口大小为所有屏幕的组合大小
+        setSize(allScreensBounds.width, allScreensBounds.height);
+
+        // 更可靠的窗口位置设置方式
+        setLocationRelativeTo(null);
+        setLocation(allScreensBounds.getLocation());
+
         setBackground(new Color(0, 0, 0, 128));
-
-        // 获取所有屏幕信息并计算虚拟屏幕边界
-        calculateScreenLayout();
-
-        // 设置窗口覆盖整个虚拟屏幕
-        setBounds(0, 0, virtualScreenBounds.width, virtualScreenBounds.height);
 
         selectionPanel = new SelectionPanel(this);
         add(selectionPanel);
@@ -207,13 +209,25 @@ class ScreenshotOverlay extends JFrame {
                 }
             }
         });
-
-        setFocusable(true);
-        requestFocusInWindow();
     }
 
-    // 关键修复：重新计算屏幕布局，确保正确识别双屏位置关系
-    private void calculateScreenLayout() {
+    // 改进的屏幕边界计算方法
+    private Rectangle getAdjustedScreenBounds() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        Rectangle bounds = new Rectangle();
+
+        for (GraphicsDevice gd : ge.getScreenDevices()) {
+            for (GraphicsConfiguration config : gd.getConfigurations()) {
+                bounds = bounds.union(config.getBounds());
+            }
+        }
+
+        // 确保边界从(0,0)开始
+        return new Rectangle(0, 0, bounds.width, bounds.height);
+    }
+
+    // 获取所有屏幕的组合边界
+    private Rectangle getCombinedScreenBounds() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         GraphicsDevice[] screens = ge.getScreenDevices();
 
@@ -222,96 +236,58 @@ class ScreenshotOverlay extends JFrame {
         int maxX = Integer.MIN_VALUE;
         int maxY = Integer.MIN_VALUE;
 
-        // 收集所有屏幕边界并找到最小坐标
         for (GraphicsDevice screen : screens) {
             GraphicsConfiguration gc = screen.getDefaultConfiguration();
-            Rectangle bounds = new Rectangle(gc.getBounds());
-            screenBoundsList.add(bounds);
+            Rectangle bounds = gc.getBounds();
 
             minX = Math.min(minX, bounds.x);
             minY = Math.min(minY, bounds.y);
             maxX = Math.max(maxX, bounds.x + bounds.width);
             maxY = Math.max(maxY, bounds.y + bounds.height);
-
-            // 输出每个屏幕的实际坐标（方便调试）
-            System.out.println("Screen " + screen.getIDstring() + " bounds: " + bounds);
         }
 
-        // 计算偏移量，确保所有坐标从(0,0)开始
-        offsetX = -minX;
-        offsetY = -minY;
-
-        // 计算虚拟屏幕总大小
-        virtualScreenBounds = new Rectangle(
-                0, 0,
-                maxX - minX,
-                maxY - minY
-        );
-
-        System.out.println("Virtual screen bounds: " + virtualScreenBounds);
-        System.out.println("Offset correction: (" + offsetX + ", " + offsetY + ")");
+        return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
     private void captureScreen() {
         try {
             Robot robot = new Robot();
 
-            // 计算实际需要捕获的区域（包含所有屏幕）
-            Rectangle captureRect = new Rectangle(
-                    -offsetX,  // 原始最小X坐标
-                    -offsetY,  // 原始最小Y坐标
-                    virtualScreenBounds.width,
-                    virtualScreenBounds.height
-            );
-
-            System.out.println("Capturing area: " + captureRect);
-            screenImage = robot.createScreenCapture(captureRect);
-
-            // 将截图和偏移信息传递给选择面板
-            selectionPanel.setScreenData(screenImage, offsetX, offsetY);
+            // 捕获所有屏幕的组合区域（使用调整后的边界）
+            screenImage = robot.createScreenCapture(allScreensBounds);
+            selectionPanel.setScreenImage(screenImage);
             repaint();
         } catch (AWTException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "截图失败: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Screenshot failed: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             dispose();
             mainFrame.setVisible(true);
         }
     }
 
     public void finishSelection(Rectangle selectionRect) {
-        // 将选择区域转换回原始屏幕坐标
-        Rectangle actualRect = new Rectangle(
-                selectionRect.x - offsetX,
-                selectionRect.y - offsetY,
-                selectionRect.width,
-                selectionRect.height
-        );
-
-        System.out.println("Selected area (corrected): " + actualRect);
         dispose();
-        new EditFrame(mainFrame, screenImage, actualRect).setVisible(true);
+        new EditFrame(mainFrame, screenImage, selectionRect).setVisible(true);
     }
 }
 
-// 选择面板类 - 修复坐标映射问题
+// 选择面板类
 class SelectionPanel extends JPanel {
     private ScreenshotOverlay parent;
     private BufferedImage screenImage;
     private Rectangle selectionRect = new Rectangle();
-    private Point startPoint;
+    private Point startPoint = null;
+    private Point endPoint = null;
     private boolean isSelecting = false;
-    private int offsetX, offsetY; // 用于坐标校正
 
     public SelectionPanel(ScreenshotOverlay parent) {
         this.parent = parent;
         setOpaque(false);
-        setPreferredSize(parent.getSize());
 
-        // 鼠标按下：记录起始点（已校正偏移）
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                startPoint = new Point(e.getX(), e.getY());
+                startPoint = e.getPoint();
                 selectionRect.setLocation(startPoint);
                 selectionRect.setSize(0, 0);
                 isSelecting = true;
@@ -321,7 +297,6 @@ class SelectionPanel extends JPanel {
             public void mouseReleased(MouseEvent e) {
                 if (isSelecting) {
                     isSelecting = false;
-                    // 确保选择区域有效
                     if (selectionRect.width > 5 && selectionRect.height > 5) {
                         parent.finishSelection(selectionRect);
                     } else {
@@ -332,75 +307,64 @@ class SelectionPanel extends JPanel {
             }
         });
 
-        // 鼠标拖动：更新选择区域
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (isSelecting) {
-                    int x = Math.min(startPoint.x, e.getX());
-                    int y = Math.min(startPoint.y, e.getY());
-                    int width = Math.abs(e.getX() - startPoint.x);
-                    int height = Math.abs(e.getY() - startPoint.y);
-                    selectionRect.setBounds(x, y, width, height);
+                    endPoint = e.getPoint();
+                    updateSelectionRect();
                     repaint();
                 }
             }
         });
     }
 
-    // 设置截图数据和偏移量
-    public void setScreenData(BufferedImage image, int offsetX, int offsetY) {
+    public void setScreenImage(BufferedImage image) {
         this.screenImage = image;
-        this.offsetX = offsetX;
-        this.offsetY = offsetY;
-        repaint();
+    }
+
+    private void updateSelectionRect() {
+        int x = Math.min(startPoint.x, endPoint.x);
+        int y = Math.min(startPoint.y, endPoint.y);
+        int width = Math.abs(endPoint.x - startPoint.x);
+        int height = Math.abs(endPoint.y - startPoint.y);
+        selectionRect.setBounds(x, y, width, height);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // 绘制完整截图（覆盖所有屏幕）
         if (screenImage != null) {
-            g.drawImage(screenImage, 0, 0, this);
+            // 确保图像正确绘制在面板上
+            g.drawImage(screenImage, 0, 0, getWidth(), getHeight(), this);
         }
 
-        // 绘制选择区域
         if (isSelecting && selectionRect.width > 0 && selectionRect.height > 0) {
+            // 绘制选择区域
             Graphics2D g2d = (Graphics2D) g;
 
-            // 绘制半透明遮罩
+            // 绘制半透明背景
             g2d.setColor(new Color(0, 0, 0, 100));
-            // 上
             g2d.fillRect(0, 0, getWidth(), selectionRect.y);
-            // 左
             g2d.fillRect(0, selectionRect.y, selectionRect.x, selectionRect.height);
-            // 右
             g2d.fillRect(selectionRect.x + selectionRect.width, selectionRect.y,
-                    getWidth() - (selectionRect.x + selectionRect.width), selectionRect.height);
-            // 下
-            g2d.fillRect(0, selectionRect.y + selectionRect.height,
-                    getWidth(), getHeight() - (selectionRect.y + selectionRect.height));
+                    getWidth() - selectionRect.x - selectionRect.width, selectionRect.height);
+            g2d.fillRect(0, selectionRect.y + selectionRect.height, getWidth(),
+                    getHeight() - selectionRect.y - selectionRect.height);
 
-            // 绘制红色选择框
+            // 绘制选择框边框
             g2d.setColor(Color.RED);
             g2d.setStroke(new BasicStroke(2));
-            g2d.drawRect(selectionRect.x, selectionRect.y,
-                    selectionRect.width, selectionRect.height);
+            g2d.drawRect(selectionRect.x, selectionRect.y, selectionRect.width, selectionRect.height);
 
-            // 显示尺寸信息
+            // 绘制尺寸信息
             String sizeInfo = selectionRect.width + " x " + selectionRect.height;
             g2d.setColor(Color.WHITE);
-            g2d.fillRect(selectionRect.x, selectionRect.y - 20,
-                    g2d.getFontMetrics().stringWidth(sizeInfo) + 10, 20);
+            g2d.fillRect(selectionRect.x, selectionRect.y - 20, g2d.getFontMetrics().stringWidth(sizeInfo) + 10, 20);
             g2d.setColor(Color.BLACK);
             g2d.drawString(sizeInfo, selectionRect.x + 5, selectionRect.y - 5);
         }
-    }
-
-    @Override
-    public Dimension getPreferredSize() {
-        return parent.getSize();
     }
 }
 
