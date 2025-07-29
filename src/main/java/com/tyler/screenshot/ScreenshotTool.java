@@ -184,15 +184,14 @@ class ScreenshotOverlay extends JFrame {
     private void initComponents() {
         setUndecorated(true);
 
-        // 获取所有屏幕的组合边界（改进方法）
+        // 获取所有屏幕的组合边界（修复后：保留实际坐标）
         allScreensBounds = getAdjustedScreenBounds();
 
         // 设置窗口大小为所有屏幕的组合大小
         setSize(allScreensBounds.width, allScreensBounds.height);
 
-        // 更可靠的窗口位置设置方式
-        setLocationRelativeTo(null);
-        setLocation(allScreensBounds.getLocation());
+        // 强制窗口位置与屏幕组合边界起始点一致（修复位置偏移）
+        setLocation(allScreensBounds.x, allScreensBounds.y);
 
         setBackground(new Color(0, 0, 0, 128));
 
@@ -211,19 +210,20 @@ class ScreenshotOverlay extends JFrame {
         });
     }
 
-    // 改进的屏幕边界计算方法
+    // 修复：正确计算多显示器组合边界（保留实际起始坐标）
     private Rectangle getAdjustedScreenBounds() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         Rectangle bounds = new Rectangle();
 
         for (GraphicsDevice gd : ge.getScreenDevices()) {
             for (GraphicsConfiguration config : gd.getConfigurations()) {
+                // 合并所有屏幕边界，保留实际minX、minY（关键）
                 bounds = bounds.union(config.getBounds());
             }
         }
 
-        // 确保边界从(0,0)开始
-        return new Rectangle(0, 0, bounds.width, bounds.height);
+        // 直接返回实际组合边界，不强制重置为(0,0)
+        return bounds;
     }
 
     // 获取所有屏幕的组合边界
@@ -788,7 +788,7 @@ class EditFrame extends JFrame {
 
         private void eraseShapes(Point point) {
             int size = currentEraserSize;
-            Rectangle eraseRect = new Rectangle(point.x - size/2, point.y - size/2, size, size);
+            Rectangle eraseRect = new Rectangle(point.x - size / 2, point.y - size / 2, size, size);
 
             List<Shape> newShapes = new ArrayList<>();
             for (Shape shape : shapes) {
@@ -1166,7 +1166,7 @@ class PinnedWindow extends JFrame {
 
     private void eraseShapes(Point point) {
         int size = currentEraserSize;
-        Rectangle eraseRect = new Rectangle(point.x - size/2, point.y - size/2, size, size);
+        Rectangle eraseRect = new Rectangle(point.x - size / 2, point.y - size / 2, size, size);
 
         List<Shape> newShapes = new ArrayList<>();
         for (Shape shape : shapes) {
@@ -1272,7 +1272,9 @@ class PinnedWindow extends JFrame {
 // 形状接口
 interface Shape {
     void draw(Graphics2D g2d);
+
     void setEndPoint(Point endPoint);
+
     Rectangle getBounds(); // 获取形状边界
 }
 
